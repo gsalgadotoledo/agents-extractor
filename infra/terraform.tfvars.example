@@ -1,10 +1,9 @@
-# Copy this file to terraform.tfvars and fill in your values
+# Copy to terraform.tfvars and fill in your values
 # cp terraform.tfvars.example terraform.tfvars
 
 aws_region        = "us-east-1"
 environment       = "demo"
-instance_type     = "t3.small"      # t3.micro for free tier
 anthropic_api_key = "sk-ant-..."    # Your Anthropic API key
-ssh_key_name      = ""              # Optional: EC2 key pair name for SSH
-allowed_ssh_cidr  = "0.0.0.0/0"    # Restrict to your IP: "1.2.3.4/32"
-domain_name       = ""              # Optional: your domain
+cpu               = 256             # 0.25 vCPU (cheapest)
+memory            = 512             # 512 MB
+desired_count     = 1               # Single task for demo

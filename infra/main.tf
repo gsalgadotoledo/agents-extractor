@@ -1,12 +1,20 @@
 # =============================================================================
 # Agents Extractor — AWS Infrastructure (Terraform)
 # =============================================================================
-# Deploys: VPC, EC2 instance, ECR repo, Security Groups, IAM
+# Deploys: VPC, ECS Fargate, ALB, ECR, CloudWatch Logs
+# 
 # Usage:
 #   cd infra/
 #   terraform init
-#   terraform plan -var="anthropic_api_key=sk-ant-..."
-#   terraform apply -var="anthropic_api_key=sk-ant-..."
+#   terraform plan
+#   terraform apply
+#
+# First deploy:
+#   1. terraform apply                    (creates ECR + infra)
+#   2. ./push-image.sh                    (builds & pushes Docker image)
+#   3. terraform apply                    (ECS pulls the image)
+#
+# Cost: ~$5-8/month (Fargate 0.25 vCPU / 512MB + ALB)
 # =============================================================================
 
 terraform {
@@ -47,34 +55,28 @@ variable "environment" {
   default     = "demo"
 }
 
-variable "instance_type" {
-  description = "EC2 instance type"
-  type        = string
-  default     = "t3.small"
-}
-
 variable "anthropic_api_key" {
   description = "Anthropic API key for Claude"
   type        = string
   sensitive   = true
 }
 
-variable "domain_name" {
-  description = "Optional domain name (leave empty to use EC2 public IP)"
-  type        = string
-  default     = ""
+variable "cpu" {
+  description = "Fargate task CPU (256 = 0.25 vCPU)"
+  type        = number
+  default     = 256
 }
 
-variable "ssh_key_name" {
-  description = "Name of existing EC2 key pair for SSH access"
-  type        = string
-  default     = ""
+variable "memory" {
+  description = "Fargate task memory (MB)"
+  type        = number
+  default     = 512
 }
 
-variable "allowed_ssh_cidr" {
-  description = "CIDR block allowed for SSH (default: nowhere)"
-  type        = string
-  default     = "0.0.0.0/0"
+variable "desired_count" {
+  description = "Number of running tasks"
+  type        = number
+  default     = 1
 }
 
 # =============================================================================
@@ -85,20 +87,7 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
+data "aws_caller_identity" "current" {}
 
 # =============================================================================
 # VPC
@@ -118,12 +107,13 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_subnet" "public" {
+  count                   = 2
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = data.aws_availability_zones.available.names[0]
+  cidr_block              = "10.0.${count.index + 1}.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
 
-  tags = { Name = "agents-extractor-public" }
+  tags = { Name = "agents-extractor-public-${count.index + 1}" }
 }
 
 resource "aws_route_table" "public" {
@@ -138,7 +128,8 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
+  count          = 2
+  subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
 
@@ -146,12 +137,11 @@ resource "aws_route_table_association" "public" {
 # Security Groups
 # =============================================================================
 
-resource "aws_security_group" "app" {
-  name_prefix = "agents-extractor-"
-  description = "Agents Extractor application"
+resource "aws_security_group" "alb" {
+  name_prefix = "agents-extractor-alb-"
+  description = "ALB - public HTTP/HTTPS"
   vpc_id      = aws_vpc.main.id
 
-  # HTTP
   ingress {
     description = "HTTP"
     from_port   = 80
@@ -160,25 +150,12 @@ resource "aws_security_group" "app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # HTTPS
   ingress {
     description = "HTTPS"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # SSH (restricted)
-  dynamic "ingress" {
-    for_each = var.ssh_key_name != "" ? [1] : []
-    content {
-      description = "SSH"
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = [var.allowed_ssh_cidr]
-    }
   }
 
   egress {
@@ -188,8 +165,73 @@ resource "aws_security_group" "app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  lifecycle {
-    create_before_destroy = true
+  lifecycle { create_before_destroy = true }
+}
+
+resource "aws_security_group" "ecs" {
+  name_prefix = "agents-extractor-ecs-"
+  description = "ECS tasks - only from ALB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "From ALB"
+    from_port       = 8000
+    to_port         = 8000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  lifecycle { create_before_destroy = true }
+}
+
+# =============================================================================
+# Application Load Balancer
+# =============================================================================
+
+resource "aws_lb" "main" {
+  name               = "agents-extractor-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = aws_subnet.public[*].id
+
+  tags = { Name = "agents-extractor-alb" }
+}
+
+resource "aws_lb_target_group" "app" {
+  name        = "agents-extractor-tg"
+  port        = 8000
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    path                = "/health"
+    port                = "traffic-port"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200"
+  }
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
   }
 }
 
@@ -225,78 +267,135 @@ resource "aws_ecr_lifecycle_policy" "app" {
 }
 
 # =============================================================================
-# IAM Role for EC2
+# CloudWatch Logs
 # =============================================================================
 
-resource "aws_iam_role" "ec2" {
-  name = "agents-extractor-ec2"
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/ecs/agents-extractor"
+  retention_in_days = 7
+}
+
+# =============================================================================
+# ECS Cluster
+# =============================================================================
+
+resource "aws_ecs_cluster" "main" {
+  name = "agents-extractor"
+
+  setting {
+    name  = "containerInsights"
+    value = "disabled"
+  }
+}
+
+# =============================================================================
+# IAM — ECS Task Execution Role
+# =============================================================================
+
+resource "aws_iam_role" "ecs_execution" {
+  name = "agents-extractor-ecs-execution"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
 }
 
-resource "aws_iam_role_policy" "ecr_pull" {
-  name = "ecr-pull"
-  role = aws_iam_role.ec2.id
+resource "aws_iam_role_policy_attachment" "ecs_execution" {
+  role       = aws_iam_role.ecs_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
 
-  policy = jsonencode({
+resource "aws_iam_role" "ecs_task" {
+  name = "agents-extractor-ecs-task"
+
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchGetImage",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchCheckLayerAvailability"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "*"
-      }
-    ]
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+    }]
   })
 }
 
-resource "aws_iam_instance_profile" "ec2" {
-  name = "agents-extractor-ec2"
-  role = aws_iam_role.ec2.name
+# =============================================================================
+# ECS Task Definition
+# =============================================================================
+
+resource "aws_ecs_task_definition" "app" {
+  family                   = "agents-extractor"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = var.cpu
+  memory                   = var.memory
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([{
+    name  = "app"
+    image = "${aws_ecr_repository.app.repository_url}:latest"
+
+    portMappings = [{
+      containerPort = 8000
+      hostPort      = 8000
+      protocol      = "tcp"
+    }]
+
+    environment = [
+      { name = "API_HOST", value = "0.0.0.0" },
+      { name = "API_PORT", value = "8000" },
+      { name = "LOG_LEVEL", value = "INFO" },
+      { name = "ANTHROPIC_API_KEY", value = var.anthropic_api_key },
+      { name = "EMAIL_FROM_NAME", value = "Processing Team" },
+      { name = "EMAIL_FROM_ADDRESS", value = "processing@demo.agents-extractor.com" },
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.app.name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
+
+    essential = true
+  }])
 }
 
 # =============================================================================
-# EC2 Instance
+# ECS Service
 # =============================================================================
 
-resource "aws_instance" "app" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.app.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2.name
-  key_name               = var.ssh_key_name != "" ? var.ssh_key_name : null
+resource "aws_ecs_service" "app" {
+  name            = "agents-extractor"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.app.arn
+  desired_count   = var.desired_count
+  launch_type     = "FARGATE"
 
-  root_block_device {
-    volume_size = 20
-    volume_type = "gp3"
+  network_configuration {
+    subnets          = aws_subnet.public[*].id
+    security_groups  = [aws_security_group.ecs.id]
+    assign_public_ip = true
   }
 
-  user_data = base64encode(templatefile("${path.module}/user-data.sh.tpl", {
-    aws_region         = var.aws_region
-    ecr_repo_url       = aws_ecr_repository.app.repository_url
-    anthropic_api_key  = var.anthropic_api_key
-    environment        = var.environment
-  }))
+  load_balancer {
+    target_group_arn = aws_lb_target_group.app.arn
+    container_name   = "app"
+    container_port   = 8000
+  }
 
-  tags = { Name = "agents-extractor-${var.environment}" }
+  depends_on = [aws_lb_listener.http]
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
 }
 
 # =============================================================================
@@ -304,26 +403,30 @@ resource "aws_instance" "app" {
 # =============================================================================
 
 output "app_url" {
-  description = "Application URL"
-  value       = "http://${aws_instance.app.public_ip}"
-}
-
-output "instance_id" {
-  description = "EC2 instance ID"
-  value       = aws_instance.app.id
+  description = "Application URL (ALB)"
+  value       = "http://${aws_lb.main.dns_name}"
 }
 
 output "ecr_repo_url" {
-  description = "ECR repository URL"
+  description = "ECR repository URL (for docker push)"
   value       = aws_ecr_repository.app.repository_url
 }
 
-output "public_ip" {
-  description = "EC2 public IP"
-  value       = aws_instance.app.public_ip
+output "cluster_name" {
+  description = "ECS cluster name"
+  value       = aws_ecs_cluster.main.name
 }
 
-output "ssh_command" {
-  description = "SSH command (if key pair configured)"
-  value       = var.ssh_key_name != "" ? "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_instance.app.public_ip}" : "No SSH key configured"
+output "push_commands" {
+  description = "Commands to build and push Docker image"
+  value       = <<-EOT
+    # Build and push:
+    aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.app.repository_url}
+    docker build -t agents-extractor .
+    docker tag agents-extractor:latest ${aws_ecr_repository.app.repository_url}:latest
+    docker push ${aws_ecr_repository.app.repository_url}:latest
+    
+    # Force new deployment:
+    aws ecs update-service --cluster agents-extractor --service agents-extractor --force-new-deployment --region ${var.aws_region}
+  EOT
 }
