@@ -181,15 +181,30 @@ docker compose --profile dev up -d
 # → http://localhost:8025 (Mailpit UI)
 ```
 
-### AWS (EC2)
+### AWS (Terraform)
+
+Full infrastructure-as-code with Terraform — VPC, EC2, ECR, IAM, Security Groups:
 
 ```bash
-# On a fresh EC2 instance:
-curl -sL https://raw.githubusercontent.com/gsalgadotoledo/agents-extractor/main/deploy/setup-ec2.sh | bash
-# Then edit .env, add ANTHROPIC_API_KEY, and: docker compose up -d
+cd infra/
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your Anthropic API key
+
+terraform init
+terraform plan
+terraform apply
+
+# Output: http://<public-ip> ready in ~3 minutes
 ```
 
-See [`deploy/setup-ec2.sh`](deploy/setup-ec2.sh) for details.
+What gets created:
+- **VPC** with public subnet and internet gateway
+- **EC2** (t3.small) with Docker + app auto-deployed via user-data
+- **ECR** repository with lifecycle policy (keeps last 5 images)
+- **IAM** role with least-privilege ECR pull access
+- **Security Groups** — HTTP/HTTPS open, SSH optional and restricted
+
+See [`infra/`](infra/) for full Terraform configuration.
 
 ## 🎥 Demo
 
