@@ -1,0 +1,58 @@
+[project]
+name = "agents-extractor"
+version = "0.1.0"
+description = "AI-powered insurance submission processing with agentic extraction"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosmtpd>=1.4.6",
+    "aiosmtplib>=5.1.0",
+    "fastapi>=0.135.2",
+    "google-api-python-client>=2.193.0",
+    "google-auth>=2.49.1",
+    "google-auth-oauthlib>=1.3.0",
+    "httpx>=0.28.1",
+    "langchain-anthropic>=1.4.0",
+    "langgraph>=1.1.3",
+    "openai>=2.30.0",
+    "openpyxl>=3.1.5",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "pypdf>=6.9.2",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.22",
+    "rich>=14.3.3",
+    "slack-sdk>=3.41.0",
+    "structlog>=25.5.0",
+    "typer>=0.24.1",
+    "uvicorn[standard]>=0.42.0",
+]
+
+[project.scripts]
+submission = "submission_platform.cli.main:app"
+
+[dependency-groups]
+dev = [
+    "fpdf2>=2.8.7",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.15.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/submission_platform"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
