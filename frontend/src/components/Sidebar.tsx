@@ -142,7 +142,7 @@ export function Sidebar({ submission, onRefresh }: Props) {
                 <User size={14} style={{ color: "var(--text-muted)" }} />
               </div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Underwriting Team</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>Processing Team</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Default (no persona)</div>
               </div>
             </div>
@@ -153,7 +153,7 @@ export function Sidebar({ submission, onRefresh }: Props) {
           onChange={async (e) => { await assignPersona(submission.id, e.target.value); onRefresh(); }}
           style={{ width: "100%", padding: "4px 6px", fontSize: 11, border: "none", background: "var(--input-bg)", borderRadius: 4, color: "var(--text)" }}
         >
-          <option value="default">Underwriting Team (default)</option>
+          <option value="default">Processing Team (default)</option>
           {personasList.map(p => <option key={p.id} value={p.id}>{p.name} - {p.tone}</option>)}
         </select>
       </div>

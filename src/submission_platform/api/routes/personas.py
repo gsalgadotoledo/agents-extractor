@@ -85,9 +85,9 @@ async def generate_persona_endpoint(
     # Step 1: Generate persona details with GPT
     tones = ["professional", "friendly", "concise", "detailed"]
     tone = random.choice(tones)
-    email_address = settings.gmail_address or "underwriting@apex-demo.com"
+    email_address = settings.gmail_address or "processing@apex-demo.com"
 
-    gen_prompt = f"""Generate a fictional insurance underwriting representative persona. Return ONLY valid JSON with these fields:
+    gen_prompt = f"""Generate a fictional insurance processing representative persona. Return ONLY valid JSON with these fields:
 {{
   "name": "First Last",
   "title": "job title at insurance company",
@@ -144,7 +144,7 @@ Be creative with diverse names and backgrounds. The personality must match the t
     name = persona_data.get("name", "Agent")
     p = personas.create_persona({
         "name": name,
-        "title": persona_data.get("title", "Underwriting Specialist"),
+        "title": persona_data.get("title", "Processing Specialist"),
         "photo": avatar_path,
         "email_name": f"{name} - Apex Insurance",
         "email_address": email_address,

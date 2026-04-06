@@ -56,3 +56,4 @@ dist/
 __pycache__/
 *.pyc
 .ruff_cache/
+.github/workflows/

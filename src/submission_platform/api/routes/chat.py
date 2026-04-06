@@ -398,7 +398,7 @@ The rep will be able to edit the email before sending it.
 
 
 CHAT_SYSTEM_PROMPT = """\
-You are the submission processing assistant for an insurance underwriting platform. \
+You are the submission processing assistant for an insurance processing platform. \
 You work alongside representatives to process commercial insurance submissions \
 (primarily General Liability) from intake to policy issuance.
 

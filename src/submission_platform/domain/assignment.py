@@ -12,10 +12,10 @@ log = get_logger(__name__)
 
 # Representatives pool
 REPRESENTATIVES = [
-    {"id": "rep-1", "name": "Sarah Chen", "role": "underwriter"},
-    {"id": "rep-2", "name": "Marcus Johnson", "role": "underwriter"},
-    {"id": "rep-3", "name": "Diana Reyes", "role": "underwriter"},
-    {"id": "rep-4", "name": "James Park", "role": "senior_underwriter"},
+    {"id": "rep-1", "name": "Sarah Chen", "role": "analyst"},
+    {"id": "rep-2", "name": "Marcus Johnson", "role": "analyst"},
+    {"id": "rep-3", "name": "Diana Reyes", "role": "analyst"},
+    {"id": "rep-4", "name": "James Park", "role": "senior_analyst"},
 ]
 
 APPROVERS = [

@@ -79,7 +79,7 @@ class TestApprove:
         result = approve(submission.id, "mgr-2", store)
         assert result.get("ok") is True
 
-    def test_underwriter_cannot_approve(self, submission: Submission, store: JsonStore):
+    def test_analyst_cannot_approve(self, submission: Submission, store: JsonStore):
         result = approve(submission.id, "rep-1", store)
         assert "error" in result
 

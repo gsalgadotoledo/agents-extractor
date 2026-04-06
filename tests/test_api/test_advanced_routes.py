@@ -51,7 +51,7 @@ class TestApproval:
         resp = client.post(f"/submissions/{sub['id']}/approve", json={"approver_id": "mgr-1"})
         assert resp.status_code == 200
 
-    def test_approve_by_underwriter_fails(self, client: TestClient):
+    def test_approve_by_analyst_fails(self, client: TestClient):
         sub = _create(client)
         resp = client.post(f"/submissions/{sub['id']}/approve", json={"approver_id": "rep-1"})
         assert resp.status_code == 400

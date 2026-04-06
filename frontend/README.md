@@ -1,6 +1,6 @@
 # frontend/ — Admin Dashboard
 
-React admin interface for managing insurance submissions. Used by underwriters and representatives to review AI-extracted data, communicate with brokers, and move submissions through the workflow.
+React admin interface for managing insurance submissions. Used by analysts and representatives to review AI-extracted data, communicate with brokers, and move submissions through the workflow.
 
 ## Stack
 

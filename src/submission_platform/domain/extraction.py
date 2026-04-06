@@ -192,7 +192,7 @@ GENERAL:
 - For genuinely missing data, use "" for text, 0 for numbers, false for booleans
 - Set confidence 0.0-1.0 based on completeness (0.9+ = nearly all fields filled)
 - Add warnings for ambiguous or inconsistent data
-- This data drives underwriting decisions — more data is always better
+- This data drives processing decisions — more data is always better
 """
 
 

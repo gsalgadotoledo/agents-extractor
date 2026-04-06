@@ -45,6 +45,6 @@ lnguyen@wcinsurance.com
 - Revenue has current vs projected values
 - One location closing, one opening - overlapping timeline
 - Carrier non-renewing (red flag even if not claims-related)
-- Regulatory inquiry - not a claim but may affect underwriting
+- Regulatory inquiry - not a claim but may affect processing
 - Dual quote request ($1M and $2M)
 - DBA is outdated

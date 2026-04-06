@@ -30,7 +30,7 @@ TONES = {
 }
 
 COMPOSE_PROMPT = """\
-You are an insurance underwriting assistant composing a response email.
+You are an insurance processing assistant composing a response email.
 
 Context:
 - Original email from: {from_addr}

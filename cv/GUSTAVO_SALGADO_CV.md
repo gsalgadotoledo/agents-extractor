@@ -10,7 +10,7 @@
 
 ## Summary
 
-Product Manager with a full-stack engineering background (10+ years), now focused on AI-powered products. Currently building agentic AI systems at an insurtech company — designing LLM-driven pipelines that read emails, extract data from PDFs, and automate underwriting workflows. I sit at the intersection of product strategy and hands-on technical execution: I can spec a feature, architect the system, and ship the code.
+Product Manager with a full-stack engineering background (10+ years), now focused on AI-powered products. Currently building agentic AI systems at an insurtech company — designing LLM-driven pipelines that read emails, extract data from PDFs, and automate processing workflows. I sit at the intersection of product strategy and hands-on technical execution: I can spec a feature, architect the system, and ship the code.
 
 ---
 

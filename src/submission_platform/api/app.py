@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from submission_platform.api.routes import attachments, chat, compose, documents, email, gmail, health, personas, settings, submissions
 from submission_platform.config import get_settings
@@ -85,6 +88,19 @@ def create_app() -> FastAPI:
     app.include_router(compose.router)
     app.include_router(documents.router)
     app.include_router(personas.router)
+
+    # Serve static frontend in production (Docker)
+    static_dir = Path(__file__).resolve().parents[3] / "static" / "frontend"
+    if static_dir.exists():
+        app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+
+        @app.get("/{path:path}", include_in_schema=False)
+        async def serve_spa(path: str):
+            file = static_dir / path
+            if file.exists() and file.is_file():
+                return FileResponse(file)
+            return FileResponse(static_dir / "index.html")
+
     return app
 
 

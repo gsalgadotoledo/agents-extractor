@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = False
-    email_from_name: str = "Underwriting Team at Apex Insurance"
-    email_from_address: str = "underwriting@apex-demo.com"
+    email_from_name: str = "Processing Team at Apex Insurance"
+    email_from_address: str = "processing@apex-demo.com"
 
     # Mailpit API
     mailpit_api_url: str = "http://localhost:8025/api/v1"

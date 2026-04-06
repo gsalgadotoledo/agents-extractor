@@ -1,6 +1,6 @@
 # 🤖 Agents Extractor
 
-**AI-powered insurance submission processing platform** — Agentic AI reads broker emails, extracts structured data from PDFs, runs business rules, and manages the full underwriting workflow autonomously.
+**AI-powered insurance submission processing platform** — Agentic AI reads broker emails, extracts structured data from PDFs, runs business rules, and manages the full processing workflow autonomously.
 
 > Built to demonstrate how LLM agents with tool-use (ReAct pattern) can replace manual data entry in insurance operations, cutting processing time from hours to seconds.
 
@@ -21,7 +21,7 @@ When a broker sends an email with insurance applications attached, Agents Extrac
 3. **Extracts** structured data using a ReAct agent that reads PDFs, validates against schemas, and self-corrects
 4. **Validates** completeness and flags missing fields
 5. **Notifies** the team via Slack with extracted summary
-6. **Assigns** to an underwriter and manages the review workflow
+6. **Assigns** to an analyst and manages the review workflow
 7. **Auto-replies** to brokers with acknowledgment and status updates
 
 ```
@@ -167,6 +167,29 @@ received → ack_sent → parsing → extracting → extracted → validated
 ```
 
 Each transition is validated by a deterministic state machine — the AI agent handles extraction, but business rules are code, not prompts.
+
+## 🐳 Deploy (Docker)
+
+```bash
+# Local
+docker compose up -d
+# → http://localhost:8000 (API + Frontend)
+# → http://localhost:8000/docs (Swagger)
+
+# With Mailpit for email testing
+docker compose --profile dev up -d
+# → http://localhost:8025 (Mailpit UI)
+```
+
+### AWS (EC2)
+
+```bash
+# On a fresh EC2 instance:
+curl -sL https://raw.githubusercontent.com/gsalgadotoledo/agents-extractor/main/deploy/setup-ec2.sh | bash
+# Then edit .env, add ANTHROPIC_API_KEY, and: docker compose up -d
+```
+
+See [`deploy/setup-ec2.sh`](deploy/setup-ec2.sh) for details.
 
 ## 🎥 Demo
 

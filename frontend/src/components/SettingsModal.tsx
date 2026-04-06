@@ -228,11 +228,11 @@ export function SettingsModal({ open, onClose }: Props) {
             </div>
             <div>
               <label style={labelStyle}>Email Sender Name</label>
-              <input value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="Underwriting Team at Apex Insurance" style={inputStyle} />
+              <input value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="Processing Team at Apex Insurance" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Email Sender Address</label>
-              <input value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="underwriting@apex-demo.com" style={inputStyle} />
+              <input value={fromAddress} onChange={(e) => setFromAddress(e.target.value)} placeholder="processing@apex-demo.com" style={inputStyle} />
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", padding: 8, background: "var(--surface-alt)", borderRadius: 6 }}>
               Settings are stored in memory only. For persistence, set them in .env
@@ -286,7 +286,7 @@ function PersonaEditor({ persona, isNew, onSave, onCancel }: { persona: Partial<
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
         <div><label style={labelStyle}>Name</label><input value={form.name || ""} onChange={e => set("name", e.target.value)} placeholder="Sarah Chen" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Title</label><input value={form.title || ""} onChange={e => set("title", e.target.value)} placeholder="Underwriting Specialist" style={inputStyle} /></div>
+        <div><label style={labelStyle}>Title</label><input value={form.title || ""} onChange={e => set("title", e.target.value)} placeholder="Processing Specialist" style={inputStyle} /></div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -315,7 +315,7 @@ function PersonaEditor({ persona, isNew, onSave, onCancel }: { persona: Partial<
 
       <div style={{ marginBottom: 16 }}>
         <label style={labelStyle}>Signature</label>
-        <textarea value={form.signature || ""} onChange={e => set("signature", e.target.value)} rows={3} placeholder={"Best regards,\nSarah Chen\nUnderwriting Specialist\nApex Insurance Group"} style={{ ...inputStyle, resize: "vertical", fontFamily: "monospace", lineHeight: 1.5 }} />
+        <textarea value={form.signature || ""} onChange={e => set("signature", e.target.value)} rows={3} placeholder={"Best regards,\nSarah Chen\nProcessing Specialist\nApex Insurance Group"} style={{ ...inputStyle, resize: "vertical", fontFamily: "monospace", lineHeight: 1.5 }} />
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
